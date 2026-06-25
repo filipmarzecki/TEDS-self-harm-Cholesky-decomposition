@@ -9,3 +9,9 @@ We fitted a trivariate Cholesky decomposition model to test stability and innova
 The Cholesky decomposition partitions A, C, and E components into three sets of factors acting at time 1 (T1), time 2 (T2), and time 3 (T3): AT1, CT1, and ET1 act on all three variables, AT2, CT2, and ET2 act on the second (age 21) and third (age 26) variables and AT3, CT3, and ET3 act only on the third (age 26) variable. 
 
 Missing data were handled using full-information maximum likelihood estimates.
+
+Three scripts fit univariate twin models to self-harm at different ages.
+
+TEDS_SH_Triv_SatModel.Rmd fits a saturated multivariate twin model to the data on self-harm at the three time points.
+
+TEDS_SH_Triv_cholesky_Rmd fits a Cholesky decomposition twin model to the data on self-harm at the three time points.
