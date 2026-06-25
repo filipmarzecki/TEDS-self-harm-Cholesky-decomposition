@@ -1,0 +1,778 @@
+---
+title: "Trivariate ACE Cholesky Script"
+author: "Filip Kaleta"
+date: "2023-03-10"
+output: html_document
+---
+
+```{r include=FALSE}
+
+#install.packages("OpenMx")
+
+#update.packages("OpenMx")
+
+require(OpenMx)
+
+library(ggplot2)
+library(scales)
+library(stringr)
+library(dplyr)
+library(forcats)
+library(tidyverse)
+library(haven)
+library(labelled)
+library(car)
+require(psych)
+require(Hmisc)
+require(plyr)
+require (DescTools)
+
+# Prepare Data 
+
+load("TEDS_SH_Age.rdata")
+
+teds <- df
+
+as_factor(teds$u1cslfh021)
+as_factor(teds$u1cslfh022)
+
+sh_ever21_1 <- teds$u1cslfh021
+sh_ever21_2 <- teds$u1cslfh022
+
+
+as_factor(teds$u1cslfh051)
+as_factor(teds$u1cslfh052)
+sh_age_1 <- teds$u1cslfh051
+sh_age_2 <- teds$u1cslfh052
+```
+
+#Self-Harm 16 & Under
+
+```{r}
+
+#SH 16 TWIN 1
+
+teds$sh_16b_1[sh_ever21_1 == 1 & sh_age_1 <= 6] <- 1 
+teds$sh_16b_1[sh_ever21_1 == 2 & sh_age_1 <= 6] <- 1
+teds$sh_16b_1[sh_ever21_1 == 3 & sh_age_1 <= 6] <- 1
+teds$sh_16b_1[sh_ever21_1 == 4 & sh_age_1 <= 6] <- 1
+
+teds$sh_16b_1[sh_ever21_1 == 1 & sh_age_1 > 6] <- 0 
+teds$sh_16b_1[sh_ever21_1 == 2 & sh_age_1 > 6] <- 0
+teds$sh_16b_1[sh_ever21_1 == 3 & sh_age_1 > 6] <- 0
+teds$sh_16b_1[sh_ever21_1 == 4 & sh_age_1 > 6] <- 0
+
+teds$sh_16b_1[sh_ever21_1 == 0 & sh_age_1 <= 6] <- 0
+teds$sh_16b_1[sh_ever21_1 == 0 & sh_age_1 > 6] <- 0
+
+teds$sh_16b_1[sh_ever21_1 == 0 & is.na(sh_age_1)] <- 0 
+teds$sh_16b_1[sh_ever21_1 == 1 & is.na(sh_age_1)] <- 0 
+teds$sh_16b_1[sh_ever21_1 == 2 & is.na(sh_age_1)] <- 0 
+teds$sh_16b_1[sh_ever21_1 == 3 & is.na(sh_age_1)] <- 0 
+teds$sh_16b_1[sh_ever21_1 == 4 & is.na(sh_age_1)] <- 0
+
+#SH 16 TWIN 2
+
+teds$sh_16b_2[sh_ever21_2 == 1 & sh_age_2 <= 6] <- 1 
+teds$sh_16b_2[sh_ever21_2 == 2 & sh_age_2 <= 6] <- 1
+teds$sh_16b_2[sh_ever21_2 == 3 & sh_age_2 <= 6] <- 1
+teds$sh_16b_2[sh_ever21_2 == 4 & sh_age_2 <= 6] <- 1
+teds$sh_16b_2[sh_ever21_2 == 1 & sh_age_2 > 6] <- 0 
+teds$sh_16b_2[sh_ever21_2 == 2 & sh_age_2 > 6] <- 0
+teds$sh_16b_2[sh_ever21_2 == 3 & sh_age_2 > 6] <- 0
+teds$sh_16b_2[sh_ever21_2 == 4 & sh_age_2 > 6] <- 0
+
+teds$sh_16b_2[sh_ever21_2 == 0 & sh_age_2 <= 6] <- 0
+teds$sh_16b_2[sh_ever21_2 == 0 & sh_age_2 > 6] <- 0
+
+teds$sh_16b_2[sh_ever21_2 == 0 & is.na(sh_age_2)] <- 0 
+teds$sh_16b_2[sh_ever21_2 == 1 & is.na(sh_age_2)] <- 0 
+teds$sh_16b_2[sh_ever21_2 == 2 & is.na(sh_age_2)] <- 0 
+teds$sh_16b_2[sh_ever21_2 == 3 & is.na(sh_age_2)] <- 0 
+teds$sh_16b_2[sh_ever21_2 == 4 & is.na(sh_age_2)] <- 0
+
+
+sh_16b_1 <- teds$sh_16b_1
+sh_16b_2 <- teds$sh_16b_2
+
+table(sh_16b_1)
+table(sh_16b_2)
+
+```
+
+#Objects of Key Variables
+
+```{r include=FALSE}
+
+as.factor(teds$sex1)
+sex1 <- teds$sex1
+sex2 <- teds$sex2
+
+as_factor(teds$u2cslfh021)
+as_factor(teds$u2cslfh022)
+
+
+#Self-harm at 21 will also be dichotomised for the genetic analysis. The “No” response to the question on self-harm will be coded as 0, and all the other responses will be coded as 1 (“Yes, once or twice”, “Yes, 3-5 times”, “Yes, 6-10 times” and “Yes, more than 10 times”). 
+
+val_labels(teds$u1cslfh021)
+
+#Dichotomising 21 twin 1 
+
+teds$sh_21b_1[teds$u2cslfh021 == 0] <- 0
+teds$sh_21b_1[teds$u2cslfh021 == 1] <- 1
+teds$sh_21b_1[teds$u2cslfh021 == 2] <- 1
+teds$sh_21b_1[teds$u2cslfh021 == 3] <- 1
+teds$sh_21b_1[teds$u2cslfh021 == 4] <- 1
+
+#Dichotomising 21 twin 2
+
+teds$sh_21b_2[teds$u2cslfh022 == 0] <- 0
+teds$sh_21b_2[teds$u2cslfh022 == 1] <- 1
+teds$sh_21b_2[teds$u2cslfh022 == 2] <- 1
+teds$sh_21b_2[teds$u2cslfh022 == 3] <- 1
+teds$sh_21b_2[teds$u2cslfh022 == 4] <- 1
+
+
+sh_21b_1 <- teds$sh_21b_1
+sh_21b_2 <- teds$sh_21b_2
+
+#SH 26
+
+as_factor(teds$zmhslfhm021)
+as_factor(teds$zmhslfhm022)
+
+
+#Dichotomising SH 26 TWIN 1 
+
+teds$sh_26b_1[teds$zmhslfhm021 == 0] <- 0
+teds$sh_26b_1[teds$zmhslfhm021 == 1] <- 1
+teds$sh_26b_1[teds$zmhslfhm021 == 2] <- 1
+teds$sh_26b_1[teds$zmhslfhm021 == 3] <- 1
+teds$sh_26b_1[teds$zmhslfhm021 == 4] <- 1
+teds$sh_26b_1[teds$zmhslfhm021 == 5] <- 1
+
+#Dichotomising SH 26 TWIN 2
+
+teds$sh_26b_2[teds$zmhslfhm022 == 0] <- 0
+teds$sh_26b_2[teds$zmhslfhm022 == 1] <- 1
+teds$sh_26b_2[teds$zmhslfhm022 == 2] <- 1
+teds$sh_26b_2[teds$zmhslfhm022 == 3] <- 1
+teds$sh_26b_2[teds$zmhslfhm022 == 4] <- 1
+teds$sh_26b_2[teds$zmhslfhm022 == 5] <- 1
+
+
+sh_26b_1 <- teds$sh_26b_1
+sh_26b_2 <- teds$sh_26b_2
+
+
+```
+
+#Univariate SH 16
+
+```{r eval=FALSE, include=FALSE}
+
+
+
+teds <- teds[teds$random==1 & teds$exclude1==0,]
+
+#Make the integer variables ordered factors
+
+teds$sh_16b_1	<-mxFactor(teds$sh_16b_1, levels=c(0:1) )
+teds$sh_16b_2 <- mxFactor(teds$sh_16b_2, levels=c(0:1) )
+
+
+nv 	<- 1		# number of variables per twin
+ntv 	<- nv*2	# number of variables per pair
+nth	<- 1		# number of max thresholds #.82
+
+selVars	<- c('sh_16b_1' , 'sh_16b_2')
+
+# Select Data for Analysis
+mzData <- subset(teds, zygos==1, selVars)
+dzData <- subset(teds, zygos==2, selVars)
+describe(mzData)
+describe(dzData)
+
+# get CT for Ordinal variable
+table(mzData$sh_16b_1, mzData$sh_16b_2)
+table(dzData$sh_16b_1, dzData$sh_16b_2)
+
+
+# Matrix & Algebra for expected means (SND), Cor, Thresholds, Th
+
+MeanL		<-mxMatrix( type="Zero", nrow=1, ncol=ntv, name="M" )
+
+Tmz		<-mxMatrix( type="Full", nrow=nth, ncol=ntv, free=T, values=c(.82, .82), 
+
+					labels=c("Tmz11","Tmz12"), name="ThMZ")
+
+CorMZ		<-mxMatrix( type="Stand", nrow=ntv, ncol=ntv, free=T, values=.6, 
+					lbound=-.99, ubound=.99, name="expCorMZ") 
+
+Tdz		<-mxMatrix( type="Full", nrow=nth, ncol=ntv, free=T, values=c(.82, .82), 
+		
+					labels=c("Tdz11","Tdz12"), name="ThDZ")
+
+CorDZ		<-mxMatrix( type="Stand", nrow=ntv, ncol=ntv, free=T, values=.3, 
+					lbound=-.99, ubound=.99, name="expCorDZ") 
+
+# Data objects for Multiple Groups
+
+dataMZ   	<- mxData( observed=mzData, type="raw" )
+dataDZ   	<- mxData( observed=dzData, type="raw" )
+
+# Objective objects for Multiple Groups
+
+objMZ    	<- mxExpectationNormal(covariance="expCorMZ", means="M", dimnames=selVars, thresholds="ThMZ" )
+
+objDZ    	<- mxExpectationNormal(covariance="expCorDZ", means="M", dimnames=selVars, thresholds="ThDZ" )
+
+fitFunction <- mxFitFunctionML()
+
+# Combine Groups
+modelMZ	<- mxModel(MeanL, Tmz, CorMZ, dataMZ, objMZ, fitFunction, name="MZ" )
+modelDZ	<- mxModel(MeanL, Tdz, CorDZ, dataDZ, objDZ, fitFunction, name="DZ" )
+minus2ll	<- mxAlgebra(expression=MZ.objective + DZ.objective, name="m2LL" )
+obj		<- mxFitFunctionAlgebra( "m2LL" )
+Conf		<- mxCI(c('MZ.expCorMZ[2,1]', 'DZ.expCorDZ[2,1]')) 
+SatModel 	<- mxModel( "Sat", modelMZ, modelDZ, minus2ll, obj, Conf)
+
+SatFit		<- mxTryHardOrdinal(SatModel, intervals=T)
+(SatSumm		<- summary(SatFit))
+
+
+# Different ways of getting output:
+round(SatFit@output$estimate,4)
+SatFit$MZ.expCorMZ
+SatFit$DZ.expCorDZ
+
+# Generate output using OpenMx functions
+mxEval(MZ.expCorMZ, SatFit)
+mxEval(DZ.expCorDZ, SatFit)
+
+# Specify ACE Model, with ONE overall set of Thresholds (withOUT Age effects on thresholds)
+
+
+# Matrix & Algebra for expected means (SND), Thresholds and correlation
+MeanL		<-mxMatrix( type="Zero", nrow=1, ncol=ntv, name="M" )
+
+
+TH		<-mxMatrix( type="Full", nrow=nth, ncol=ntv, free=T, values=c(.82), lbound=c(-3), ubound=3, labels=c("T1"), name="Th") 
+
+# Matrices declared to store a, c, and e Path Coefficients
+pathA	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.8, label="a11", name="a" ) 
+pathC	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.3, label="c11", name="c" )
+pathE	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.6, label="e11", name="e" )
+	
+# Matrices generated to hold A, C, and E components and total Variance
+covA	<- mxAlgebra( expression=a %*% t(a), name="A" )
+covC	<- mxAlgebra( expression=c %*% t(c), name="C" ) 
+covE	<- mxAlgebra( expression=e %*% t(e), name="E" )
+covP	<- mxAlgebra( expression=A+C+E, name="V" )
+
+# Algebra for expected Variance/Covariance Matrices in MZ & DZ twins
+covMZ	<- mxAlgebra( expression= rbind( cbind(A+C+E , A+C),
+                                       cbind(A+C   , A+C+E)), name="expCovMZ" )
+covDZ	<- mxAlgebra( expression= rbind( cbind(A+C+E     , 0.5%x%A+C),
+                                       cbind(0.5%x%A+C , A+C+E)), name="expCovDZ" )
+
+# Constraint on total variance of Ordinal variables (A+C+E=1)
+mUnv	<- mxMatrix( type="Unit", nrow=nv, ncol=1, name="Unv" )
+varL	<- mxConstraint( expression=diag2vec(V)==Unv, name="VarL" )
+
+# Data objects for Multiple Groups
+dataMZ   <- mxData( observed=mzData, type="raw" )
+dataDZ   <- mxData( observed=dzData, type="raw" )
+
+# Objective objects for Multiple Groups
+objMZ	<- mxExpectationNormal( covariance="expCovMZ", means="M", dimnames=selVars, thresholds="Th" )
+objDZ	<- mxExpectationNormal( covariance="expCovDZ", means="M", dimnames=selVars, thresholds="Th" )
+fitFunction <- mxFitFunctionML()
+
+# Combine Groups
+pars		<- list(MeanL, TH, pathA, pathC, pathE, covA, covC, covE, covP, mUnv, varL )
+modelMZ	<- mxModel(pars, covMZ, dataMZ, objMZ, fitFunction, name="MZ" )
+modelDZ	<- mxModel(pars, covDZ, dataDZ, objDZ, fitFunction, name="DZ" )
+minus2ll	<- mxAlgebra( expression=MZ.objective + DZ.objective, name="m2LL" )
+obj		<- mxFitFunctionAlgebra( "m2LL" )
+Conf <- mxCI(c('MZ.A[1,1]', 'MZ.C[1,1]', 'MZ.E[1,1]'))
+AceModel 	<- mxModel("ACE", modelMZ, modelDZ, minus2ll, obj, Conf)
+
+# RUN AceModel
+
+AceFit   <- mxTryHardOrdinal(AceModel, intervals=T)
+(AceSumm  <- summary(AceFit, verbose = T))
+round(AceFit@output$estimate,4)
+
+mxEval(MZ.A, AceFit)
+mxEval(MZ.C, AceFit)
+mxEval(MZ.E, AceFit)
+
+mxCompare (SatFit,AceFit)
+
+
+```
+
+# Univariate SH 21
+
+```{r eval=FALSE, include=FALSE}
+
+
+teds <- teds[teds$random==1 & teds$exclude1==0,]
+
+#Make the integer variables ordered factors
+teds$sh_21b_1	<-mxFactor(teds$sh_21b_1, levels=c(0:1) )
+teds$sh_21b_2 <- mxFactor(teds$sh_21b_2, levels=c(0:1) )
+
+
+nv 	<- 1		# number of variables per twin
+ntv 	<- nv*2	# number of variables per pair
+nth	<- 1		# number of max thresholds
+
+selVars	<- c('sh_21b_1' , 'sh_21b_2')
+
+# Select Data for Analysis
+mzData <- subset(teds, zygos==1, selVars)
+dzData <- subset(teds, zygos==2, selVars)
+describe(mzData)
+describe(dzData)
+
+# get CT for Ordinal variable
+table(mzData$sh_21b_1, mzData$sh_21b_2)
+table(dzData$sh_21b_1, dzData$sh_21b_2)
+
+
+# Matrix & Algebra for expected means (SND), Cor, Thresholds, Age effect on Th
+
+MeanL		<-mxMatrix( type="Zero", nrow=1, ncol=ntv, name="M" )
+
+Tmz		<-mxMatrix( type="Full", nrow=nth, ncol=ntv, free=T, values=c(.90, .90), 
+
+					labels=c("Tmz11","Tmz12"), name="ThMZ")
+
+CorMZ		<-mxMatrix( type="Stand", nrow=ntv, ncol=ntv, free=T, values=.6, 
+					lbound=-.99, ubound=.99, name="expCorMZ") 
+
+Tdz		<-mxMatrix( type="Full", nrow=nth, ncol=ntv, free=T, values=c(.90, .90), 
+		
+					labels=c("Tdz11","Tdz12"), name="ThDZ")
+
+CorDZ		<-mxMatrix( type="Stand", nrow=ntv, ncol=ntv, free=T, values=.3, 
+					lbound=-.99, ubound=.99, name="expCorDZ") 
+
+# Data objects for Multiple Groups
+
+dataMZ   	<- mxData( observed=mzData, type="raw" )
+dataDZ   	<- mxData( observed=dzData, type="raw" )
+
+# Objective objects for Multiple Groups
+
+objMZ    	<- mxExpectationNormal(covariance="expCorMZ", means="M", dimnames=selVars, thresholds="ThMZ" )
+
+objDZ    	<- mxExpectationNormal(covariance="expCorDZ", means="M", dimnames=selVars, thresholds="ThDZ" )
+
+fitFunction <- mxFitFunctionML()
+
+# Combine Groups
+modelMZ	<- mxModel(MeanL, Tmz, CorMZ, dataMZ, objMZ, fitFunction, name="MZ" )
+modelDZ	<- mxModel(MeanL, Tdz, CorDZ, dataDZ, objDZ, fitFunction, name="DZ" )
+minus2ll	<- mxAlgebra(expression=MZ.objective + DZ.objective, name="m2LL" )
+obj		<- mxFitFunctionAlgebra( "m2LL" )
+Conf		<- mxCI(c('MZ.expCorMZ[2,1]', 'DZ.expCorDZ[2,1]'))
+SatModel 	<- mxModel( "Sat", modelMZ, modelDZ, minus2ll, obj, Conf)
+
+
+#SatFit	<- mxRun(SatModel, intervals=TRUE)
+
+SatFit		<- mxTryHardOrdinal(SatModel, intervals=T)
+(SatSumm		<- summary(SatFit))
+
+
+# Different ways of getting output:
+round(SatFit@output$estimate,4)
+SatFit$MZ.expCorMZ
+SatFit$DZ.expCorDZ
+
+# Specify ACE Model, with ONE overall set of Thresholds (withOUT Age effects on thresholds)
+
+
+# Matrix & Algebra for expected means (SND), Thresholds and correlation
+MeanL		<-mxMatrix( type="Zero", nrow=1, ncol=ntv, name="M" )
+
+add		<-mxMatrix( type="Lower",nrow=nth, ncol=nth, free=F, values=1, name="Low") 
+TH		<-mxMatrix( type="Full", nrow=nth, ncol=ntv, free=T, values=c(.90), lbound=c(-3), ubound=3, labels=c("T1"), name="Th") 
+
+# Matrices declared to store a, c, and e Path Coefficients
+pathA	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.8, label="a11", name="a" ) 
+pathC	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.3, label="c11", name="c" )
+pathE	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.6, label="e11", name="e" )
+	
+# Matrices generated to hold A, C, and E components and total Variance
+covA	<- mxAlgebra( expression=a %*% t(a), name="A" )
+covC	<- mxAlgebra( expression=c %*% t(c), name="C" ) 
+covE	<- mxAlgebra( expression=e %*% t(e), name="E" )
+covP	<- mxAlgebra( expression=A+C+E, name="V" )
+
+# Algebra for expected Variance/Covariance Matrices in MZ & DZ twins
+covMZ	<- mxAlgebra( expression= rbind( cbind(A+C+E , A+C),
+                                       cbind(A+C   , A+C+E)), name="expCovMZ" )
+covDZ	<- mxAlgebra( expression= rbind( cbind(A+C+E     , 0.5%x%A+C),
+                                       cbind(0.5%x%A+C , A+C+E)), name="expCovDZ" )
+
+# Constraint on total variance of Ordinal variables (A+C+E=1)
+mUnv	<- mxMatrix( type="Unit", nrow=nv, ncol=1, name="Unv" )
+varL	<- mxConstraint( expression=diag2vec(V)==Unv, name="VarL" )
+
+# Data objects for Multiple Groups
+dataMZ   <- mxData( observed=mzData, type="raw" )
+dataDZ   <- mxData( observed=dzData, type="raw" )
+
+# Objective objects for Multiple Groups
+objMZ	<- mxExpectationNormal( covariance="expCovMZ", means="M", dimnames=selVars, thresholds="Th" )
+objDZ	<- mxExpectationNormal( covariance="expCovDZ", means="M", dimnames=selVars, thresholds="Th" )
+fitFunction <- mxFitFunctionML()
+
+# Combine Groups
+pars		<- list(MeanL, TH, add, pathA, pathC, pathE, covA, covC, covE, covP, mUnv, varL )
+modelMZ	<- mxModel(pars, covMZ, dataMZ, objMZ, fitFunction, name="MZ" )
+modelDZ	<- mxModel(pars, covDZ, dataDZ, objDZ, fitFunction, name="DZ" )
+minus2ll	<- mxAlgebra( expression=MZ.objective + DZ.objective, name="m2LL" )
+obj		<- mxFitFunctionAlgebra( "m2LL" )
+Conf <- mxCI(c('MZ.A[1,1]', 'MZ.C[1,1]', 'MZ.E[1,1]'))
+AceModel 	<- mxModel( "ACE", modelMZ, modelDZ, minus2ll, obj, Conf)
+
+AceFit   <- mxTryHardOrdinal(AceModel, intervals=TRUE)
+(AceSumm  <- summary(AceFit, verbose = T))
+round(AceFit@output$estimate,4)
+
+mxEval(MZ.A, AceFit)
+mxEval(MZ.C, AceFit)
+mxEval(MZ.E, AceFit)
+
+mxCompare (SatFit,AceFit)
+
+```
+
+#Univariate SH 26
+
+```{r eval=FALSE, include=FALSE}
+
+require(OpenMx)
+
+teds <- teds[teds$random==1 & teds$exclude1==0,]
+
+
+#Make the integer variables ordered factors
+teds$sh_26b_1	<-mxFactor(teds$sh_26b_1, levels=c(0:1) )
+teds$sh_26b_2 <- mxFactor(teds$sh_26b_2, levels=c(0:1) )
+
+
+nv 	<- 1		# number of variables per twin
+ntv 	<- nv*2	# number of variables per pair
+nth	<- 1		# number of max thresholds
+
+selVars	<- c('sh_26b_1' , 'sh_26b_2')
+
+# Select Data for Analysis
+mzData <- subset(teds, zygos==1, selVars)
+dzData <- subset(teds, zygos==2, selVars)
+describe(mzData)
+describe(dzData)
+
+# get CT for Ordinal variable
+table(mzData$sh_26b_1, mzData$sh_26b_2)
+table(dzData$sh_26b_1, dzData$sh_26b_2)
+
+# Matrix & Algebra for expected means (SND), Cor, Thresholds, Age effect on Th
+
+MeanL		<-mxMatrix( type="Zero", nrow=1, ncol=ntv, name="M" )
+
+Tmz		<-mxMatrix( type="Full", nrow=nth, ncol=ntv, free=T, values=c(.91, .91), 
+
+					labels=c("Tmz11","Tmz12"), name="ThMZ")
+
+CorMZ		<-mxMatrix( type="Stand", nrow=ntv, ncol=ntv, free=T, values=.6, 
+					lbound=-.99, ubound=.99, name="expCorMZ") 
+
+Tdz		<-mxMatrix( type="Full", nrow=nth, ncol=ntv, free=T, values=c(.91, .91), 
+		
+					labels=c("Tdz11","Tdz12"), name="ThDZ")
+
+CorDZ		<-mxMatrix( type="Stand", nrow=ntv, ncol=ntv, free=T, values=.3, 
+					lbound=-.99, ubound=.99, name="expCorDZ") 
+
+# Data objects for Multiple Groups
+
+dataMZ   	<- mxData( observed=mzData, type="raw" )
+dataDZ   	<- mxData( observed=dzData, type="raw" )
+
+# Objective objects for Multiple Groups
+
+objMZ    	<- mxExpectationNormal(covariance="expCorMZ", means="M", dimnames=selVars, thresholds="ThMZ" )
+
+objDZ    	<- mxExpectationNormal(covariance="expCorDZ", means="M", dimnames=selVars, thresholds="ThDZ" )
+
+fitFunction <- mxFitFunctionML()
+
+# Combine Groups
+modelMZ	<- mxModel(MeanL, Tmz, CorMZ, dataMZ, objMZ, fitFunction, name="MZ" )
+modelDZ	<- mxModel(MeanL, Tdz, CorDZ, dataDZ, objDZ, fitFunction, name="DZ" )
+minus2ll	<- mxAlgebra(expression=MZ.objective + DZ.objective, name="m2LL" )
+obj		<- mxFitFunctionAlgebra( "m2LL" )
+Conf	<- mxCI(c('MZ.expCorMZ[2,1]', 'DZ.expCorDZ[2,1]'))
+SatModel 	<- mxModel( "Sat", modelMZ, modelDZ, minus2ll, obj, Conf)
+
+
+SatFit		<- mxTryHardOrdinal(SatModel, intervals=T)
+(SatSumm		<- summary(SatFit))
+
+
+# Different ways of getting output:
+round(SatFit@output$estimate,4)
+SatFit$MZ.expCorMZ
+SatFit$DZ.expCorDZ
+
+# Generate output using OpenMx functions
+mxEval(MZ.expCorMZ, SatFit)
+mxEval(DZ.expCorDZ, SatFit)
+
+# Matrix & Algebra for expected means (SND), Thresholds and correlation
+MeanL		<-mxMatrix( type="Zero", nrow=1, ncol=ntv, name="M")
+
+add		<- mxMatrix(type="Lower", nrow=nth, ncol=nth, free=F, values=1, name="Low") 
+TH		<- mxMatrix(type="Full", nrow=nth, ncol=ntv, free=T, values= .91, lbound= -3, ubound= 3, labels="T1", name="Th")
+
+# Matrices declared to store a, c, and e Path Coefficients
+pathA	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.8, label="a11", name="a" ) 
+pathC	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.3, label="c11", name="c" )
+pathE	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=.6, label="e11", name="e" )
+	
+# Matrices generated to hold A, C, and E components and total Variance
+covA	<- mxAlgebra( expression=a %*% t(a), name="A" )
+covC	<- mxAlgebra( expression=c %*% t(c), name="C" ) 
+covE	<- mxAlgebra( expression=e %*% t(e), name="E" )
+covP	<- mxAlgebra( expression=A+C+E, name="V" )
+
+# Algebra for expected Variance/Covariance Matrices in MZ & DZ twins
+covMZ	<- mxAlgebra( expression= rbind( cbind(A+C+E , A+C),
+                                       cbind(A+C   , A+C+E)), name="expCovMZ" )
+covDZ	<- mxAlgebra( expression= rbind( cbind(A+C+E     , 0.5%x%A+C),
+                                       cbind(0.5%x%A+C , A+C+E)), name="expCovDZ" )
+
+# Constraint on total variance of Ordinal variables (A+C+E=1)
+mUnv	<- mxMatrix( type="Unit", nrow=nv, ncol=1, name="Unv" )
+varL	<- mxConstraint( expression=diag2vec(V)==Unv, name="VarL" )
+
+# Data objects for Multiple Groups
+dataMZ   <- mxData( observed=mzData, type="raw" )
+dataDZ   <- mxData( observed=dzData, type="raw" )
+
+# Objective objects for Multiple Groups
+objMZ	<- mxExpectationNormal( covariance="expCovMZ", means="M", dimnames=selVars, thresholds="Th" )
+objDZ	<- mxExpectationNormal( covariance="expCovDZ", means="M", dimnames=selVars, thresholds="Th" )
+fitFunction <- mxFitFunctionML()
+
+# Combine Groups
+pars		<- list(MeanL, TH, add, pathA, pathC, pathE, covA, covC, covE, covP, mUnv, varL )
+modelMZ	<- mxModel(pars, covMZ, dataMZ, objMZ, fitFunction, name="MZ" )
+modelDZ	<- mxModel(pars, covDZ, dataDZ, objDZ, fitFunction, name="DZ" )
+minus2ll	<- mxAlgebra( expression=MZ.objective + DZ.objective, name="m2LL" )
+obj		<- mxFitFunctionAlgebra( "m2LL" )
+Conf <- mxCI(c('MZ.A[1,1]', 'MZ.C[1,1]', 'MZ.E[1,1]'))
+AceModel 	<- mxModel( "ACE", modelMZ, modelDZ, minus2ll, obj, Conf)
+
+AceFit   <- mxTryHardOrdinal(AceModel, intervals=TRUE)
+(AceSumm  <- summary(AceFit, verbose = T))
+round(AceFit@output$estimate,4)
+
+mxEval(MZ.A, AceFit)
+mxEval(MZ.C, AceFit)
+mxEval(MZ.E, AceFit)
+
+mxCompare (SatFit,AceFit)
+```
+
+# TRIVARIATE MODEL
+
+```{r}
+
+require(OpenMx)
+
+teds <- teds[teds$random==1 & teds$exclude1==0,]
+
+#Make the integer variables ordered factors
+
+teds$sh_16b_1	<-mxFactor(teds$sh_16b_1, levels=c(0:1) )
+teds$sh_16b_2 <- mxFactor(teds$sh_16b_2, levels=c(0:1) )
+
+teds$sh_21b_1	<-mxFactor(teds$sh_21b_1, levels=c(0:1) )
+teds$sh_21b_2 <- mxFactor(teds$sh_21b_2, levels=c(0:1) )
+
+teds$sh_26b_1	<-mxFactor(teds$sh_26b_1, levels=c(0:1) )
+teds$sh_26b_2 <- mxFactor(teds$sh_26b_2, levels=c(0:1) )
+
+
+nv	<- 3		# number of variables for a twin 
+ntv	<- 2*nv		# number of variables for a pair 
+nth <- 1 
+
+# Note: ordinal variable(s) must be selected as last
+# Twin 1 variable then twin 2 variable 
+
+selVars	<- c('sh_16b_1', 'sh_21b_1', 'sh_26b_1', 'sh_16b_2', 'sh_21b_2', 'sh_26b_2')
+
+# Select Data for Analysis
+mzData <- subset(teds, zygos==1, selVars)
+dzData <- subset(teds, zygos==2, selVars)
+
+# Descriptive Statistics of data by zygosity group
+describe(mzData)
+describe(dzData)
+
+
+table(sh_16b_1)
+table(sh_16b_2)
+
+table(sh_21b_1)
+table(sh_21b_2)
+
+table(sh_26b_1)
+table(sh_26b_2)
+
+```
+
+```{r}
+# Cholesky ACE Model
+
+# Matrix for expected Means
+
+# Matrix & Algebra for expected means (SND), Thresholds, effect of Age on Th 
+Mean		<-mxMatrix( type="Zero", nrow=1, ncol=ntv, name="expM" )
+
+
+Tr		<-mxMatrix( type="Full", nrow=1, ncol=nv, free=T, values=c(.9,1,1), labels=c('THm1','THm2', 'THm3'), lbound=-4, ubound=4, name="Th")
+Thres	<-mxAlgebra( expression= cbind(Th, Th), name="expThres")
+
+# Matrices to store a, and e Path Coefficients
+pathA	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=c(.5,.5,.5,.5,.5,.5), label=c("a11","a21","a22","a31","a32","a33"), name="a")
+pathC	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=c(.01,.01,.01,.01,.01,.01), label=c("c11","c21","c22","c31","c32","c33"), name="c")
+pathE	<- mxMatrix( type="Lower", nrow=nv, ncol=nv, free=T, values=c(.5,.5,.5,.5,.5,.5), label=c("e11","e21","e22","e31","e32","e33"), name="e")
+
+
+# Matrices generated to hold A, C, and E computed Variance Components
+covA	<- mxAlgebra( expression=a %*% t(a), name="A" )
+covC	<- mxAlgebra( expression=c %*% t(c), name="C" ) 
+covE	<- mxAlgebra( expression=e %*% t(e), name="E" )
+
+
+# Algebra to compute standardized variance components
+covP	<- mxAlgebra( expression=A+C+E, name="V" )
+StA	<- mxAlgebra( expression=A/V, name="h2")
+StC	<- mxAlgebra( expression=C/V, name="c2")
+StE	<- mxAlgebra( expression=E/V, name="e2")
+
+
+
+# Algebra to compute Phenotypic, A, C & E correlations
+matI	<- mxMatrix( type="Iden", nrow=nv, ncol=nv, name="I")
+rph	<- mxAlgebra( expression= solve(sqrt(I*V)) %*% V %*% solve(sqrt(I*V)), name="Rph") 
+rA	<- mxAlgebra( expression= solve(sqrt(I*A)) %*% A %*% solve(sqrt(I*A)), name="Ra" )
+rC	<- mxAlgebra( expression= solve(sqrt(I*C)) %*% C %*% solve(sqrt(I*C)), name="Rc" )
+rE	<- mxAlgebra( expression= solve(sqrt(I*E)) %*% E %*% solve(sqrt(I*E)), name="Re" )
+
+stv  <- mxAlgebra( expression = solve(sqrt(I*V)), name= "StV")
+
+stCholA <- mxAlgebra( expression = cbind(StV %*% a), name = "stcholA")
+stCholA2 <- mxAlgebra( expression = cbind(stcholA*stcholA), name = "stcholA2")
+
+stCholC <- mxAlgebra( expression = cbind(StV %*% c), name = "stcholC")
+stCholC2 <- mxAlgebra( expression = cbind(stcholC*stcholC), name = "stcholC2")
+
+stCholE <- mxAlgebra( expression = cbind(StV %*% e), name = "stcholE")
+stCholE2 <- mxAlgebra( expression = cbind(stcholE*stcholE), name = "stcholE2")
+
+
+# Constraint on total variance of Ordinal variables (A+C+E=1)
+varL1	<- mxConstraint( expression=V[1,1]==1, name="Var1" )
+varL2	<- mxConstraint( expression=V[2,2]==1, name="Var2" )
+varL3	<- mxConstraint( expression=V[3,3]==1, name="Var3" )
+
+
+# Algebra for expected Variance/Covariance Matrices in MZ & DZ twins
+covMZ	<- mxAlgebra( expression= rbind( cbind(A+C+E , A+C),
+                                       cbind(A+C  , A+C+E)), name="ExpCovMZ" )
+covDZ	<- mxAlgebra( expression= rbind( cbind(A+C+E      , 0.5%x%A+C),
+                                       cbind(0.5%x%A+C , A+C+E)), name="ExpCovDZ" )
+
+
+# Data objects for Multiple Groups
+dataMZ	<- mxData( observed=mzData, type="raw" )
+dataDZ	<- mxData( observed=dzData, type="raw" )
+
+
+# Objective objects for Multiple Groups
+objmz  <- mxExpectationNormal(covariance="ExpCovMZ", means="expM", dimnames=selVars, thresholds="expThres")
+objdz	<- mxExpectationNormal(covariance="ExpCovDZ", means="expM", dimnames=selVars, thresholds="expThres")
+
+
+fitFunction 	<- mxFitFunctionML()
+
+# Combine Groups
+pars		<- list(pathA, pathC, pathE, covA, covC, covE, covP, StA, StC, StE, matI, rph, rA, rC, rE, stv, stCholA, stCholA2, stCholC, stCholC2, stCholE, stCholE2, Mean, Tr, Thres, varL1, varL2, varL3)
+modelMZ	<- mxModel( pars, covMZ, dataMZ, objmz, fitFunction, name="MZ" )
+modelDZ	<- mxModel( pars, covDZ, dataDZ, objdz, fitFunction, name="DZ" )
+minus2ll	<- mxAlgebra( expression=MZ.objective + DZ.objective, name="m2LL" )
+obj		<- mxFitFunctionAlgebra( "m2LL" )
+
+#civ1 		<- mxCI (c ('MZM.A[1,1]', 'MZM.C[1,1]', 'MZM.E[1,1]' ) )			# h2, c2, e2 v1
+#civ2 		<- mxCI (c ('MZM.A[2,2]', 'MZM.C[2,2]', 'MZM.E[2,2]' ) )			# h2, c2, e2 v2
+#cirph21	<- mxCI (c ('MZM.Rph21[1,1]', 'MZM.Rph21[1,2]', 'MZM.Rph21[1,3]'))	# rph due to A,C,E 
+
+ciCholA		<- mxCI(c('stcholA2[1,1]', 'stcholA2[2,1]', 'stcholA2[2,2]', 'stcholA2[3,1]', 'stcholA2[3,2]', 'stcholA2[3,3]'))			
+ciCholC		<- mxCI(c('stcholC2[1,1]', 'stcholC2[2,1]', 'stcholC2[2,2]', 'stcholC2[3,1]', 'stcholC2[3,2]', 'stcholC2[3,3]'))			
+ciCholE		<- mxCI(c('stcholE2[1,1]', 'stcholE2[2,1]', 'stcholE2[2,2]', 'stcholE2[3,1]', 'stcholE2[3,2]', 'stcholE2[3,3]'))			
+
+HomACEModel	<-mxModel('Hom', pars, modelMZ, modelDZ, minus2ll, obj, ciCholA, ciCholC, ciCholE) 
+
+```
+
+```{r}
+# RUN Mutlivariate ACE Model
+#mxOption(NULL, "Default optimizer", "NPSOL")
+
+#mxOption(NULL,"Default optimizer","SLSQP")
+
+
+#HomACEFit  <- mxRun(HomACEModel, intervals=F)
+
+#HomACEFit	<- mxTryHardOrdinal(HomACEModel, greenOK = TRUE, checkHess = FALSE, finetuneGradient=FALSE, exhaustive=TRUE, OKstatuscodes=c(0,1,5,6), wtgcsv=c("prev"),intervals=F)
+
+HomACEFit	<- mxTryHardOrdinal(HomACEModel,intervals=T)
+
+
+(HomACESumm  <- summary(HomACEFit))
+
+# Generate Output
+
+HomACEFit$Hom$MZ.V
+HomACEFit$Hom$MZ.Rph
+HomACEFit$Hom$MZ.A  
+HomACEFit$Hom$MZ.C
+HomACEFit$Hom$MZ.E
+
+HomACEFit$Hom$stcholA
+HomACEFit$Hom$stcholA2
+
+HomACEFit$Hom$stcholC
+HomACEFit$Hom$stcholC2
+
+HomACEFit$Hom$stcholE
+HomACEFit$Hom$stcholE2
+```
+
+```{r}
+# COMPARE MODELS: Print Comparative Fit Statistics                         
+# ---------------------------------------------------------------------------------------------
+
+mxCompare(SatFit, HomACEFit)
+```

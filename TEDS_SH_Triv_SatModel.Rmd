@@ -1,0 +1,243 @@
+---
+title: "TriACE_SH"
+author: "Filip Kaleta"
+date: "2023-03-05"
+output: html_document
+---
+
+```{r include=FALSE}
+
+library(ggplot2)
+library(scales)
+library(stringr)
+library(dplyr)
+library(forcats)
+library(tidyverse)
+library(haven)
+library(labelled)
+library(car)
+require(OpenMx)
+require(psych)
+
+# Prepare Data 
+
+load("TEDS_SH_Age.rdata")
+
+teds0 <- df
+
+teds <- teds0[teds0$random==1 & teds0$exclude1==0,]
+
+# Converting variables:
+
+as_factor(teds$u1cslfh021)
+as_factor(teds$u1cslfh022)
+
+sh_ever21_1 <- teds$u1cslfh021
+sh_ever21_2 <- teds$u1cslfh022
+
+
+as_factor(teds$u1cslfh051)
+as_factor(teds$u1cslfh052)
+
+sh_age_1 <- teds$u1cslfh051
+sh_age_2 <- teds$u1cslfh052
+
+as_factor(teds$u2cslfh021)
+as_factor(teds$u2cslfh022)
+
+as_factor(teds$zmhslfhm021)
+as_factor(teds$zmhslfhm022)
+
+#Dichotomising SH 16 TWIN 1
+
+teds$sh_16_2_1[sh_ever21_1 == 1 & sh_age_1 <= 6] <- 1 
+teds$sh_16_2_1[sh_ever21_1 == 2 & sh_age_1 <= 6] <- 1
+teds$sh_16_2_1[sh_ever21_1 == 3 & sh_age_1 <= 6] <- 1
+teds$sh_16_2_1[sh_ever21_1 == 4 & sh_age_1 <= 6] <- 1
+
+teds$sh_16_2_1[sh_ever21_1 == 1 & sh_age_1 > 6] <- 0 
+teds$sh_16_2_1[sh_ever21_1 == 2 & sh_age_1 > 6] <- 0
+teds$sh_16_2_1[sh_ever21_1 == 3 & sh_age_1 > 6] <- 0
+teds$sh_16_2_1[sh_ever21_1 == 4 & sh_age_1 > 6] <- 0
+
+teds$sh_16_2_1[sh_ever21_1 == 0 & sh_age_1 <= 6] <- 0
+teds$sh_16_2_1[sh_ever21_1 == 0 & sh_age_1 > 6] <- 0
+
+teds$sh_16_2_1[sh_ever21_1 == 0 & is.na(sh_age_1)] <- 0 
+teds$sh_16_2_1[sh_ever21_1 == 1 & is.na(sh_age_1)] <- 0 
+teds$sh_16_2_1[sh_ever21_1 == 2 & is.na(sh_age_1)] <- 0 
+teds$sh_16_2_1[sh_ever21_1 == 3 & is.na(sh_age_1)] <- 0 
+teds$sh_16_2_1[sh_ever21_1 == 4 & is.na(sh_age_1)] <- 0
+
+#Dichotomising SH 16 TWIN 2
+
+teds$sh_16_2_2[sh_ever21_2 == 1 & sh_age_2 <= 6] <- 1 
+teds$sh_16_2_2[sh_ever21_2 == 2 & sh_age_2 <= 6] <- 1
+teds$sh_16_2_2[sh_ever21_2 == 3 & sh_age_2 <= 6] <- 1
+teds$sh_16_2_2[sh_ever21_2 == 4 & sh_age_2 <= 6] <- 1
+
+teds$sh_16_2_2[sh_ever21_2 == 1 & sh_age_2 > 6] <- 0 
+teds$sh_16_2_2[sh_ever21_2 == 2 & sh_age_2 > 6] <- 0
+teds$sh_16_2_2[sh_ever21_2 == 3 & sh_age_2 > 6] <- 0
+teds$sh_16_2_2[sh_ever21_2 == 4 & sh_age_2 > 6] <- 0
+
+teds$sh_16_2_2[sh_ever21_2 == 0 & sh_age_2 <= 6] <- 0
+teds$sh_16_2_2[sh_ever21_2 == 0 & sh_age_2 > 6] <- 0
+
+teds$sh_16_2_2[sh_ever21_2 == 0 & is.na(sh_age_2)] <- 0 
+teds$sh_16_2_2[sh_ever21_2 == 1 & is.na(sh_age_2)] <- 0 
+teds$sh_16_2_2[sh_ever21_2 == 2 & is.na(sh_age_2)] <- 0 
+teds$sh_16_2_2[sh_ever21_2 == 3 & is.na(sh_age_2)] <- 0 
+teds$sh_16_2_2[sh_ever21_2 == 4 & is.na(sh_age_2)] <- 0
+
+
+sh_16_2_1 <- teds$sh_16_2_1
+sh_16_2_2 <- teds$sh_16_2_2
+
+#Dichotomising SH 21 TWIN 1 
+
+teds$sh_21_2_1[teds$u2cslfh021 == 0] <- 0
+teds$sh_21_2_1[teds$u2cslfh021 == 1] <- 1
+teds$sh_21_2_1[teds$u2cslfh021 == 2] <- 1
+teds$sh_21_2_1[teds$u2cslfh021 == 3] <- 1
+teds$sh_21_2_1[teds$u2cslfh021 == 4] <- 1
+
+#Dichotomising SH 21 TWIN 2
+
+teds$sh_21_2_2[teds$u2cslfh022 == 0] <- 0
+teds$sh_21_2_2[teds$u2cslfh022 == 1] <- 1
+teds$sh_21_2_2[teds$u2cslfh022 == 2] <- 1
+teds$sh_21_2_2[teds$u2cslfh022 == 3] <- 1
+teds$sh_21_2_2[teds$u2cslfh022 == 4] <- 1
+
+
+sh_21_2_1 <- teds$sh_21_2_1
+sh_21_2_2 <- teds$sh_21_2_2
+
+#Dichotomising SH 26 TWIN 1 
+
+teds$sh_26_2_1[teds$zmhslfhm021 == 0] <- 0
+teds$sh_26_2_1[teds$zmhslfhm021 == 1] <- 1
+teds$sh_26_2_1[teds$zmhslfhm021 == 2] <- 1
+teds$sh_26_2_1[teds$zmhslfhm021 == 3] <- 1
+teds$sh_26_2_1[teds$zmhslfhm021 == 4] <- 1
+teds$sh_26_2_1[teds$zmhslfhm021 == 5] <- 1
+
+#Dichotomising SH 26 TWIN 2
+
+teds$sh_26_2_2[teds$zmhslfhm022 == 0] <- 0
+teds$sh_26_2_2[teds$zmhslfhm022 == 1] <- 1
+teds$sh_26_2_2[teds$zmhslfhm022 == 2] <- 1
+teds$sh_26_2_2[teds$zmhslfhm022 == 3] <- 1
+teds$sh_26_2_2[teds$zmhslfhm022 == 4] <- 1
+teds$sh_26_2_2[teds$zmhslfhm022 == 5] <- 1
+
+
+sh_26_2_1 <- teds$sh_26_2_1
+sh_26_2_2 <- teds$sh_26_2_2
+
+```
+
+```{r}
+
+# Declare Ordinal variables Mx Factors:
+
+teds$sh_16_2_1 <- mxFactor(teds$sh_16_2_1, levels=c(0:1) )
+teds$sh_16_2_2 <- mxFactor(teds$sh_16_2_2, levels=c(0:1) )
+
+teds$sh_21_2_1 <- mxFactor(teds$sh_21_2_1, levels=c(0:1) )
+teds$sh_21_2_2 <- mxFactor(teds$sh_21_2_2, levels=c(0:1) )
+
+teds$sh_26_2_1 <- mxFactor(teds$sh_26_2_1, levels=c(0:1) )
+teds$sh_26_2_2 <- mxFactor(teds$sh_26_2_2, levels=c(0:1) )
+
+
+nv	<- 3		# number of variables for a twin 
+ntv	<- 2*nv		# number of variables for a pair 
+nth <- 1 
+
+# Note: ordinal variable(s) must be selected as last
+
+selVars	<- c('sh_16_2_1', 'sh_16_2_2', 'sh_21_2_1','sh_21_2_2', 'sh_26_2_1', 'sh_26_2_2')
+
+# Select Data for Analysis
+mzData <- subset(teds, zygos==1, selVars)
+dzData <- subset(teds, zygos==2, selVars)
+
+# Descriptive Statistics of data by zygosity group
+describe(mzData)
+describe(dzData)
+
+```
+
+```{r}
+# 1)	For simplicity, we'll start with a 
+#	Multivariate Constrained Saturated Model (Gaussian Decomposition): 
+#	Equal Means & Variances across Twin Order & zyg group
+#	One overall set of Within-person cross-trait correlations (rPh)
+#	Symmetric xtwin-xtrait cor matrices in MZ and DZ group 
+#	One overall threshold
+# --------------------------------------------------------------------------------------------
+
+# Matrix & Algebra for expected means and covariances 
+MeanL	<-mxMatrix(type="Zero", nrow=1, ncol=ntv, free=F, name="M")
+
+
+CorMZ <-mxMatrix(type="Stand", nrow=ntv, ncol=ntv, free=T, values=.5, lbound=-.999, ubound=.999, name="expCorMZ")
+
+#labels=c("MZMrph1","MZMrph2","MZMxtxt1","MZMxtxt2","MZMrph3","MZMxtxt1","MZMxtxt3","MZMxtxt2","MZMxtxt3","MZMrph1","MZMrph2","MZMrph3")
+
+CorDZ <-mxMatrix(type="Stand", nrow=ntv, ncol=ntv, free=T, values=.5, lbound=-.999, ubound=.999, name="expCorDZ")
+
+#labels=c("DZMrph1","DZMrph2","DZMn","DZMxtxt1","DZMxtxt2","DZMrph3","DZMxtxt1","DZMd","DZMxtxt3","DZMxtxt2","DZMxtxt3","DZMf","DZMrph1","DZMrph2","DZMrph3")
+
+Tmz	<-mxMatrix(type="Full", nrow=nth, ncol=ntv, free=TRUE, values=.9, lbound=-3, ubound=3, labels=c("Tmz11","Tmz12","Tmz13","Tmz21","Tmz22","Tmz23"), name="expThresMZ")
+
+
+Tdz	<-mxMatrix(type="Full", nrow=nth, ncol=ntv, free=TRUE, values=.9, lbound=-3, ubound=3, labels=c("Tdz11","Tdz12","Tdz13","Tdz21","Tdz22","Tdz23"), name="expThresDZ" )
+
+
+# Data objects for Multiple Groups
+dataMZ   <- mxData(mzData, type="raw" )
+dataDZ   <- mxData(dzData, type="raw" )
+
+# Objective objects for Multiple Groups
+objMZ	<- mxExpectationNormal(covariance="expCorMZ", means="M", dimnames=selVars, thresholds="expThresMZ") 
+objDZ	<- mxExpectationNormal(covariance="expCorDZ", means="M", dimnames=selVars, thresholds="expThresDZ")
+
+fitFunction <- mxFitFunctionML()
+
+# Combine Groups
+modelMZ	<- mxModel(name="MZ", CorMZ, MeanL, Tmz, dataMZ, objMZ, fitFunction)
+modelDZ	<- mxModel(name="DZ", CorDZ, MeanL, Tdz, dataDZ, objDZ, fitFunction)
+
+minus2ll	<- mxAlgebra(MZ.objective + DZ.objective, name="m2LL")
+obj		<- mxFitFunctionAlgebra("m2LL")
+
+#Conf1		<- mxCI (c ('MZ.MZCor[2,1]', 'MZ.MZCor[3,1]', 'MZ.MZCor[4,1]', 'MZ.MZCor[4,2]') )
+#Conf2		<- mxCI (c ('DZ.DZCor[3,1]', 'DZ.DZCor[4,1]', 'DZ.DZCor[4,2]') )
+
+SatModel <- mxModel("Sat", minus2ll, obj, modelMZ, modelDZ)
+```
+
+```{r}
+# 1)	RUN Saturated Model (Tetrachronic correlations)
+SatFit	<- mxTryHardOrdinal(SatModel, intervals=F)
+(SatSum	<- summary(SatFit))
+
+# Generate SatModel Output
+round(SatFit@output$estimate,4)
+
+mxEval(MZ.M, SatFit)
+mxEval(MZ.expCorMZ, SatFit)
+mxEval(DZ.expCorDZ, SatFit)
+
+
+#Try to get matrix correlation - worked for Helena
+mxEval(DZ.CorDZ, SatFit$DZ)
+
+```
+
+```{r}
+
+```
